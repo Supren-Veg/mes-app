@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api }     from '../api/client';
 import { Button }  from '@/components/ui/button';
-import { LogOut, ChefHat, Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, RefreshCw, Clock } from 'lucide-react';
+import { LogOut, ChefHat, Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, RefreshCw, Clock, Loader2 } from 'lucide-react';
 
 // ─── Helpers de data/hora ────────────────────────────────────────────────────
 
@@ -158,9 +158,11 @@ function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, err
               onClick={onSave}
               disabled={saving}
               className="p-1.5 rounded-lg text-green-600 hover:bg-green-600/10 transition-colors disabled:opacity-40"
-              title="Salvar"
+              title={autoSaving && requiredFilled ? 'Salvando automaticamente…' : 'Salvar'}
             >
-              <Check className="h-5 w-5" />
+              {autoSaving && requiredFilled
+                ? <Loader2 className="h-5 w-5 animate-spin" />
+                : <Check className="h-5 w-5" />}
             </button>
             <button
               onClick={onCancel}
@@ -280,9 +282,9 @@ export default function Tablet() {
         fetchAll();
       } catch (e) {
         setNewError(e.message || 'Erro ao salvar automaticamente.');
+      } finally {
         setAutoSaving(false);
       }
-      setAutoSaving(false);
     }, 1200);
 
     return () => clearTimeout(autoSaveRef.current);
