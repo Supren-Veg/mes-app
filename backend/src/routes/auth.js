@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const operatorRepository = require('../repositories/operatorRepository');
 const { authMiddleware } = require('../middleware/auth');
 const { JWT_SECRET } = require('../config');
+const { loginSchema, changePasswordSchema, validate } = require('../lib/schemas');
 
 const router = Router();
 
@@ -28,9 +29,9 @@ const guestTokenLimiter = rateLimit({
 
 // POST /api/auth/login
 router.post('/login', loginLimiter, (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
+  const data = validate(loginSchema, req.body, res);
+  if (!data) return;
+  const { email, password } = data;
 
   const user = operatorRepository.findByEmail(email.toLowerCase().trim());
   if (!user || !user.password_hash)
@@ -76,9 +77,9 @@ router.get('/me', authMiddleware, (req, res) => {
 
 // POST /api/auth/change-password  (autenticado)
 router.post('/change-password', authMiddleware, (req, res) => {
-  const { password } = req.body;
-  if (!password || password.length < 6)
-    return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+  const data = validate(changePasswordSchema, req.body, res);
+  if (!data) return;
+  const { password } = data;
 
   const hash = bcrypt.hashSync(password, 10);
   operatorRepository.changePassword(req.user.id, hash);

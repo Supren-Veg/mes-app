@@ -257,4 +257,8 @@ db.exec(`
   )
 `);
 
+// Runner de migrations versionadas (src/db/migrations/NNN-descricao.js)
+const { runMigrations } = require('./migrate');
+runMigrations(db);
+
 module.exports = db;
