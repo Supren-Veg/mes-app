@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api }     from '../api/client';
 import { Button }  from '@/components/ui/button';
@@ -47,14 +47,21 @@ const EMPTY_NEW = { order_id: '', stage_id: '', started_at: '', finished_at: '',
 
 function ReadRow({ step, onEdit, onDelete, deleting }) {
   const dur = durationLabel(step.started_at, step.finished_at);
+  const needsFinish = step.started_at && !step.finished_at;
   return (
-    <tr className="border-b border-border hover:bg-muted/30 transition-colors">
+    <tr className={`border-b border-border transition-colors ${needsFinish ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/30'}`}>
       <td className="px-3 py-3 text-sm text-foreground font-medium">{step.product_name}</td>
       <td className="px-3 py-3 text-sm text-foreground">{step.stage_name}</td>
       <td className="px-3 py-3 text-sm text-foreground font-mono">{toTime(step.started_at) || '—'}</td>
       <td className="px-3 py-3 text-sm">
-        <span className="font-mono text-foreground">{toTime(step.finished_at) || '—'}</span>
-        {dur && <span className="ml-2 text-xs text-muted-foreground">({dur})</span>}
+        {needsFinish ? (
+          <span className="text-xs text-amber-600 font-medium">Aguardando término</span>
+        ) : (
+          <>
+            <span className="font-mono text-foreground">{toTime(step.finished_at) || '—'}</span>
+            {dur && <span className="ml-2 text-xs text-muted-foreground">({dur})</span>}
+          </>
+        )}
       </td>
       <td className="px-3 py-3">
         <div className="flex items-center gap-1">
@@ -81,7 +88,8 @@ function ReadRow({ step, onEdit, onDelete, deleting }) {
 
 // ─── Linha em modo edição ─────────────────────────────────────────────────────
 
-function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, error }) {
+function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, error, autoSaving }) {
+  const requiredFilled = data.order_id && data.stage_id && data.date && data.started_at;
   return (
     <>
       <tr className="border-b border-primary/30 bg-primary/5">
@@ -164,10 +172,17 @@ function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, err
           </div>
         </td>
       </tr>
-      {error && (
+      {(error || (autoSaving && requiredFilled)) && (
         <tr>
           <td colSpan={5} className="px-3 py-2">
-            <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+            {autoSaving && requiredFilled && (
+              <p className="text-xs text-amber-600 bg-amber-500/10 rounded-lg px-3 py-2">
+                Salvando automaticamente…
+              </p>
+            )}
+            {error && (
+              <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+            )}
           </td>
         </tr>
       )}
@@ -189,9 +204,10 @@ export default function Tablet() {
   const [fetchError,   setFetchError]   = useState(null);
 
   // Estado do formulário de nova linha
-  const [newRow,    setNewRow]    = useState(null);   // null = oculto
-  const [newSaving, setNewSaving] = useState(false);
-  const [newError,  setNewError]  = useState(null);
+  const [newRow,      setNewRow]      = useState(null);   // null = oculto
+  const [newSaving,   setNewSaving]   = useState(false);
+  const [newError,    setNewError]    = useState(null);
+  const [autoSaving,  setAutoSaving]  = useState(false);
 
   // Estado da linha em edição
   const [editingId,   setEditingId]   = useState(null);
@@ -200,8 +216,9 @@ export default function Tablet() {
   const [editError,   setEditError]   = useState(null);
   const [deletingId,  setDeletingId]  = useState(null);
 
-  const refreshRef = useRef(null);
-  const syncPollRef = useRef(null);
+  const refreshRef   = useRef(null);
+  const syncPollRef  = useRef(null);
+  const autoSaveRef  = useRef(null);
 
   // ── Buscar dados ────────────────────────────────────────────────────────────
 
@@ -240,6 +257,36 @@ export default function Tablet() {
     }, 30000);
     return () => clearInterval(refreshRef.current);
   }, [fetchAll]);
+
+  // Autosave: cria a etapa automaticamente quando os campos obrigatórios estão preenchidos.
+  // Permite que um operador registre o início e outro operador adicione o término depois.
+  useEffect(() => {
+    if (!newRow) { clearTimeout(autoSaveRef.current); return; }
+
+    const { order_id, stage_id, date, started_at } = newRow;
+    if (!order_id || !stage_id || !date || !started_at) return;
+
+    clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(async () => {
+      setAutoSaving(true);
+      setNewError(null);
+      try {
+        await api.post(`/orders/${order_id}/steps`, {
+          stage_id:    Number(stage_id),
+          started_at:  toISO(date, started_at),
+          finished_at: toISO(date, newRow.finished_at) ?? null,
+        });
+        setNewRow(null);
+        fetchAll();
+      } catch (e) {
+        setNewError(e.message || 'Erro ao salvar automaticamente.');
+        setAutoSaving(false);
+      }
+      setAutoSaving(false);
+    }, 1200);
+
+    return () => clearTimeout(autoSaveRef.current);
+  }, [newRow, fetchAll]);
 
   // ── Navegação de datas ──────────────────────────────────────────────────────
 
@@ -495,9 +542,10 @@ export default function Tablet() {
                       stages={stages}
                       onChange={setNewRow}
                       onSave={saveNewRow}
-                      onCancel={() => setNewRow(null)}
-                      saving={newSaving}
+                      onCancel={() => { clearTimeout(autoSaveRef.current); setNewRow(null); }}
+                      saving={newSaving || autoSaving}
                       error={newError}
+                      autoSaving={autoSaving}
                     />
                   )}
                 </tbody>
