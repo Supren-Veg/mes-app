@@ -7,6 +7,13 @@
  *
  * O runner cria a tabela schema_migrations (se não existir) e executa
  * apenas as migrations ainda não registradas nela.
+ *
+ * Migrations com múltiplos statements devem ser atômicas — use transação:
+ *   function up(db) {
+ *     db.exec('BEGIN');
+ *     try { db.exec('...'); db.exec('...'); db.exec('COMMIT'); }
+ *     catch (e) { db.exec('ROLLBACK'); throw e; }
+ *   }
  */
 
 const fs   = require('fs');

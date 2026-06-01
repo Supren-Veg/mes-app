@@ -35,6 +35,7 @@ const EXPLICIT_MAP = {
   'quibe':                      'quibe vegano',
   'empada de palmito g':        'empada de palmito m',
   'creme de leite de amêndoas': 'creme de leite',
+  'creme de leite de amendoas': 'creme de leite', // variante sem acento
 };
 
 // ── Lookup/criação de produto ──────────────────────────────────────────────────

@@ -38,7 +38,7 @@ const createOrderSchema = z.object({
 });
 
 const updateOrderSchema = z.object({
-  status:          z.string().optional(),
+  status:          z.enum(['Pendente', 'Em Andamento', 'Concluído', 'Cancelado']).optional(),
   produced_qty:    z.number().min(0).optional().nullable(),
   planned_qty:     z.number().positive().optional().nullable(),
   notes:           z.string().optional(),
