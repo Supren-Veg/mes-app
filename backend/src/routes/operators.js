@@ -3,6 +3,7 @@ const bcrypt       = require('bcryptjs');
 const { generateTempPassword, sendTempPasswordEmail } = require('../services/emailService');
 const operatorRepository = require('../repositories/operatorRepository');
 const { adminMiddleware } = require('../middleware/auth');
+const { createOperatorSchema, updateOperatorSchema, validate } = require('../lib/schemas');
 
 const router = Router();
 
@@ -16,8 +17,9 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', adminMiddleware, async (req, res) => {
-  const { name, email, external_id } = req.body;
-  if (!name) return res.status(400).json({ error: 'name é obrigatório' });
+  const data = validate(createOperatorSchema, req.body, res);
+  if (!data) return;
+  const { name, email, external_id } = data;
 
   let passwordHash = null;
   let tempPassword = null;
@@ -41,7 +43,9 @@ router.post('/', adminMiddleware, async (req, res) => {
 });
 
 router.put('/:id', adminMiddleware, (req, res) => {
-  const { name, active, external_id, role } = req.body;
+  const data = validate(updateOperatorSchema, req.body, res);
+  if (!data) return;
+  const { name, active, external_id, role, email } = data;
   const target = operatorRepository.findRoleById(req.params.id);
   const VALID_ROLES = ['admin', 'conferente', 'producao'];
   const newRole = VALID_ROLES.includes(role) ? role : null;
@@ -49,7 +53,7 @@ router.put('/:id', adminMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Você não pode remover sua própria permissão de admin.' });
 
   const fields = { name, active, external_id, role: newRole };
-  if ('email' in req.body) fields.email = req.body.email;
+  if ('email' in data) fields.email = email;
 
   res.json(operatorRepository.update(req.params.id, fields));
 });

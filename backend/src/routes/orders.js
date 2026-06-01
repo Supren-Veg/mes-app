@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const orderRepository = require('../repositories/orderRepository');
 const { requireNonGuest } = require('../middleware/auth');
+const { createOrderSchema, updateOrderSchema, updateStepSchema, validate } = require('../lib/schemas');
 const router = Router();
 
 // GET /steps?date=YYYY-MM-DD — todos os steps do dia (visão planilha)
@@ -12,8 +13,9 @@ router.get('/steps', (req, res) => {
 
 // PUT /steps/:stepId — editar step
 router.put('/steps/:stepId', requireNonGuest, (req, res) => {
-  const { stage_id, started_at, finished_at } = req.body;
-  const updated = orderRepository.updateStep(req.params.stepId, { stage_id, started_at, finished_at });
+  const data = validate(updateStepSchema, req.body, res);
+  if (!data) return;
+  const updated = orderRepository.updateStep(req.params.stepId, data);
   if (!updated) return res.status(404).json({ error: 'Step não encontrado' });
   res.json(updated);
 });
@@ -36,15 +38,15 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', requireNonGuest, (req, res) => {
-  const { product_id, operator_id, production_date, planned_qty, notes } = req.body;
-  if (!product_id || !production_date)
-    return res.status(400).json({ error: 'product_id e production_date são obrigatórios' });
-  res.status(201).json(orderRepository.create({ product_id, operator_id, production_date, planned_qty, notes }));
+  const data = validate(createOrderSchema, req.body, res);
+  if (!data) return;
+  res.status(201).json(orderRepository.create(data));
 });
 
 router.put('/:id', requireNonGuest, (req, res) => {
-  const { status, produced_qty, planned_qty, notes, product_id, operator_id, production_date } = req.body;
-  res.json(orderRepository.update(req.params.id, { status, produced_qty, planned_qty, notes, product_id, operator_id, production_date }));
+  const data = validate(updateOrderSchema, req.body, res);
+  if (!data) return;
+  res.json(orderRepository.update(req.params.id, data));
 });
 
 router.delete('/:id', requireNonGuest, (req, res) => {
