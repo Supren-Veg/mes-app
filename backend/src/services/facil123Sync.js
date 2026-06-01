@@ -32,8 +32,9 @@ function normName(name) {
 
 // ── Mapeamento explícito Fácil123 → MES ───────────────────────────────────────
 const EXPLICIT_MAP = {
-  'quibe':               'quibe vegano',
-  'empada de palmito g': 'empada de palmito m',
+  'quibe':                      'quibe vegano',
+  'empada de palmito g':        'empada de palmito m',
+  'creme de leite de amêndoas': 'creme de leite',
 };
 
 // ── Lookup/criação de produto ──────────────────────────────────────────────────
