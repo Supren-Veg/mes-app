@@ -31,7 +31,9 @@ app.use(cors({
 app.use(express.json());
 
 // Permite embedding via iframe no portal unificado
-const FRAME_ANCESTORS_CSP = "frame-ancestors 'self' https://gestao-supren.vercel.app https://app.suprenveg.com.br";
+// FRAME_ORIGINS: origens extras separadas por espaço (configurar no Railway)
+const extraOrigins = process.env.FRAME_ORIGINS ?? ''
+const FRAME_ANCESTORS_CSP = `frame-ancestors 'self' https://gestao-supren.vercel.app https://app.suprenveg.com.br https://*.up.railway.app${extraOrigins ? ' ' + extraOrigins : ''}`;
 app.use((_req, res, next) => {
   res.setHeader('Content-Security-Policy', FRAME_ANCESTORS_CSP);
   res.removeHeader('X-Frame-Options');
