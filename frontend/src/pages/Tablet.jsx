@@ -49,13 +49,13 @@ function ReadRow({ step, onEdit, onDelete, deleting }) {
   const dur = durationLabel(step.started_at, step.finished_at);
   const needsFinish = step.started_at && !step.finished_at;
   return (
-    <tr className={`border-b border-border transition-colors ${needsFinish ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/30'}`}>
+    <tr className={`border-b border-border transition-colors ${needsFinish ? 'bg-warn/5 hover:bg-warn/10' : 'hover:bg-muted/30'}`}>
       <td className="px-3 py-3 text-sm text-foreground font-medium">{step.product_name}</td>
       <td className="px-3 py-3 text-sm text-foreground">{step.stage_name}</td>
       <td className="px-3 py-3 text-sm text-foreground font-mono">{toTime(step.started_at) || '—'}</td>
       <td className="px-3 py-3 text-sm">
         {needsFinish ? (
-          <span className="text-xs text-amber-600 font-medium">Aguardando término</span>
+          <span className="text-xs text-warn font-medium">Aguardando término</span>
         ) : (
           <>
             <span className="font-mono text-foreground">{toTime(step.finished_at) || '—'}</span>
@@ -70,7 +70,7 @@ function ReadRow({ step, onEdit, onDelete, deleting }) {
             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="Editar"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
           </button>
           <button
             onClick={() => onDelete(step.id)}
@@ -78,7 +78,7 @@ function ReadRow({ step, onEdit, onDelete, deleting }) {
             className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
             title="Excluir"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </button>
         </div>
       </td>
@@ -157,19 +157,19 @@ function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, err
             <button
               onClick={onSave}
               disabled={saving}
-              className="p-1.5 rounded-lg text-green-600 hover:bg-green-600/10 transition-colors disabled:opacity-40"
+              className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-colors disabled:opacity-40"
               title={autoSaving && requiredFilled ? 'Salvando automaticamente…' : 'Salvar'}
             >
               {autoSaving && requiredFilled
-                ? <Loader2 className="h-5 w-5 animate-spin" />
-                : <Check className="h-5 w-5" />}
+                ? <Loader2 className="size-5 animate-spin" />
+                : <Check className="size-5" />}
             </button>
             <button
               onClick={onCancel}
               className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
               title="Cancelar"
             >
-              <X className="h-5 w-5" />
+              <X className="size-5" />
             </button>
           </div>
         </td>
@@ -178,7 +178,7 @@ function EditRow({ data, orders, stages, onChange, onSave, onCancel, saving, err
         <tr>
           <td colSpan={5} className="px-3 py-2">
             {autoSaving && requiredFilled && (
-              <p className="text-xs text-amber-600 bg-amber-500/10 rounded-lg px-3 py-2">
+              <p className="text-xs text-warn bg-warn/10 rounded-lg px-3 py-2">
                 Salvando automaticamente…
               </p>
             )}
@@ -422,8 +422,8 @@ export default function Tablet() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shrink-0">
-            <ChefHat className="h-5 w-5 text-primary-foreground" />
+          <div className="flex size-9 items-center justify-center rounded-lg bg-primary shrink-0">
+            <ChefHat className="size-5 text-primary-foreground" />
           </div>
           <div>
             <p className="font-semibold text-foreground text-base leading-none">Produção</p>
@@ -437,10 +437,10 @@ export default function Tablet() {
             className="text-muted-foreground p-2 disabled:opacity-40"
             title="Sincronizar Fácil123"
           >
-            <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-5 ${syncing ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={logout} className="text-muted-foreground p-2">
-            <LogOut className="h-5 w-5" />
+            <LogOut className="size-5" />
           </button>
         </div>
       </header>
@@ -453,7 +453,7 @@ export default function Tablet() {
             onClick={() => shiftDay(-1)}
             className="p-2 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="size-5" />
           </button>
 
           <div className="flex flex-col items-center gap-1 flex-1">
@@ -472,7 +472,7 @@ export default function Tablet() {
             onClick={() => shiftDay(1)}
             className="p-2 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="size-5" />
           </button>
         </div>
 
@@ -497,7 +497,7 @@ export default function Tablet() {
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Produto</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Etapa</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      <div className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Início</div>
+                      <div className="flex items-center gap-1"><Clock className="size-3.5" />Início</div>
                     </th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Término</th>
                     <th className="px-3 py-2.5 w-20"></th>
@@ -570,7 +570,7 @@ export default function Tablet() {
               size="lg"
               className="w-full rounded-xl text-base py-6 border-dashed"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="size-5 mr-2" />
               Nova linha
             </Button>
           )

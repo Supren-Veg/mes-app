@@ -54,8 +54,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center pb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary mb-3">
-            <ChefHat className="h-5 w-5 text-primary-foreground" />
+          <div className="flex size-10 items-center justify-center rounded-md bg-primary mb-3">
+            <ChefHat className="size-5 text-primary-foreground" />
           </div>
           <CardTitle className="text-base font-semibold text-foreground">Dados Operacionais</CardTitle>
           <p className="text-sm text-muted-foreground mt-0.5">Acesso ao sistema</p>
@@ -88,7 +88,7 @@ export default function Login() {
             </div>
 
             <Button type="submit" disabled={loading} className="w-full mt-1">
-              <LogIn className="h-4 w-4" />
+              <LogIn className="size-4" />
               {loading ? 'Entrando…' : 'Entrar'}
             </Button>
           </form>

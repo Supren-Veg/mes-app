@@ -19,18 +19,18 @@ export default function DeleteConfirm({ order, onClose, onDeleted }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">Excluir Ordem</h2>
-        <p className="text-sm text-gray-600">
+        <h2 className="text-base font-semibold text-muted-foreground">Excluir Ordem</h2>
+        <p className="text-sm text-muted-foreground">
           Tem certeza que deseja excluir a ordem de <strong>{order.product_name}</strong> em{' '}
           <strong>{order.production_date}</strong>? Esta ação não pode ser desfeita.
         </p>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {error && <p className="text-destructive text-sm">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={onClose} className="px-4 py-1.5 rounded border text-sm text-muted-foreground hover:bg-muted">
             Cancelar
           </button>
           <button onClick={handleDelete} disabled={deleting}
-            className="px-4 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-sm disabled:opacity-50">
+            className="px-4 py-1.5 rounded bg-destructive hover:bg-destructive text-white text-sm disabled:opacity-50">
             {deleting ? 'Excluindo…' : 'Excluir'}
           </button>
         </div>

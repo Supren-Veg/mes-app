@@ -52,8 +52,8 @@ function Sidebar({ nav, user, isGuest, logout, pendingCount }) {
     <aside className="w-60 shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border min-h-screen">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-          <ChefHat className="h-4 w-4 text-primary-foreground" />
+        <div className="flex size-8 items-center justify-center rounded-md bg-primary">
+          <ChefHat className="size-4 text-primary-foreground" />
         </div>
         <span className="font-semibold text-sm text-sidebar-foreground">Dados Operacionais</span>
       </div>
@@ -73,7 +73,7 @@ function Sidebar({ nav, user, isGuest, logout, pendingCount }) {
                 : 'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors'
             }
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="size-4 shrink-0" />
             <span className="flex-1">{label}</span>
             {pendingBadge && pendingCount > 0 && (
               <Badge className="h-4 min-w-4 px-1 text-[10px] leading-none">{pendingCount}</Badge>
@@ -87,7 +87,7 @@ function Sidebar({ nav, user, isGuest, logout, pendingCount }) {
       {/* User footer */}
       <div className="px-3 py-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 px-3 py-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-semibold shrink-0">
+          <div className="flex size-7 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-semibold shrink-0">
             {isGuest ? 'G' : (user?.name?.[0] ?? '?').toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
@@ -103,7 +103,7 @@ function Sidebar({ nav, user, isGuest, logout, pendingCount }) {
           onClick={logout}
           className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
         >
-          {isGuest ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+          {isGuest ? <LogIn className="size-4" /> : <LogOut className="size-4" />}
           {isGuest ? 'Fazer login' : 'Sair'}
         </Button>
       </div>

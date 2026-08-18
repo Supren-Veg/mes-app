@@ -61,7 +61,7 @@ function TabProdutos({ products, refetch, onError }) {
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-20">
           {['KG','UND','L','G'].map(u => <option key={u}>{u}</option>)}
         </select>
-        <Button onClick={add} size="sm"><Plus className="h-4 w-4" /> Adicionar</Button>
+        <Button onClick={add} size="sm"><Plus className="size-4" /> Adicionar</Button>
       </div>
 
       <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ function TabEtapas({ stages, refetch, onError }) {
           onKeyDown={e => e.key === 'Enter' && add()} className="flex-1" />
         <Input placeholder="Categoria (opcional)" value={form.category}
           onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-44" />
-        <Button onClick={add} size="sm"><Plus className="h-4 w-4" /> Adicionar</Button>
+        <Button onClick={add} size="sm"><Plus className="size-4" /> Adicionar</Button>
       </div>
 
       <div className="flex items-center justify-between">
@@ -222,7 +222,7 @@ function TabMetas({ targets, stages, refetchTargets, onError }) {
         </select>
         <Input type="number" step="0.5" min="0" placeholder="Meta (min)"
           value={form.target_minutes} onChange={e => setForm(f => ({ ...f, target_minutes: e.target.value }))} className="w-32" />
-        <Button onClick={add} size="sm"><Plus className="h-4 w-4" /> Definir</Button>
+        <Button onClick={add} size="sm"><Plus className="size-4" /> Definir</Button>
       </div>
       <p className="text-xs text-muted-foreground">Tempo-alvo por ocorrência — usado no gráfico de comparação do Dashboard.</p>
 
@@ -296,7 +296,7 @@ function TabUsuarios({ operators, refetch, onError, me }) {
   const ROLE_CLASS = {
     admin:      'bg-primary/20 text-primary hover:bg-primary/30',
     conferente: 'bg-muted text-muted-foreground hover:bg-muted/80',
-    producao:   'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30',
+    producao:   'bg-warn/20 text-warn hover:bg-warn/30',
   };
 
   async function toggleRole(op) {
@@ -320,15 +320,15 @@ function TabUsuarios({ operators, refetch, onError, me }) {
           onKeyDown={e => e.key === 'Enter' && add()} className="flex-1" />
         <Input placeholder="Email (opcional)" type="email" value={form.email}
           onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="flex-1" />
-        <Button onClick={add} size="sm"><Plus className="h-4 w-4" /> Adicionar</Button>
+        <Button onClick={add} size="sm"><Plus className="size-4" /> Adicionar</Button>
       </div>
 
       {msg && <p className="text-xs text-primary font-medium">{msg}</p>}
       {resetMsg && (
         <div className={`flex items-center justify-between text-xs rounded-lg px-3 py-2
-          ${resetMsg.isPassword ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400' : 'bg-primary/10 border border-primary/30 text-primary'}`}>
+          ${resetMsg.isPassword ? 'bg-warn/10 border border-warn/30 text-warn' : 'bg-primary/10 border border-primary/30 text-primary'}`}>
           <span>{resetMsg.text}</span>
-          <button onClick={() => setResetMsg(null)} className="ml-2 opacity-60 hover:opacity-100"><X className="h-3 w-3" /></button>
+          <button onClick={() => setResetMsg(null)} className="ml-2 opacity-60 hover:opacity-100"><X className="size-3" /></button>
         </div>
       )}
       <p className="text-xs text-muted-foreground">
@@ -395,7 +395,7 @@ function TabUsuarios({ operators, refetch, onError, me }) {
                             className="text-xs text-primary hover:text-primary/80 font-medium">Editar</button>
                           {!isSelf && (
                             <button onClick={() => resetPassword(op)} disabled={resetting === op.id}
-                              className="text-xs text-yellow-400 hover:text-yellow-300 font-medium disabled:opacity-40">
+                              className="text-xs text-warn hover:text-warn font-medium disabled:opacity-40">
                               {resetting === op.id ? '…' : 'Senha ↺'}
                             </button>
                           )}
@@ -437,7 +437,7 @@ export default function Cadastros() {
       {error && (
         <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-lg px-4 py-2 flex justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)}><X className="h-4 w-4" /></button>
+          <button onClick={() => setError(null)}><X className="size-4" /></button>
         </div>
       )}
 
