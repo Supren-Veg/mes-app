@@ -25,6 +25,14 @@ Pontos de variação declarados por este projeto:
 | Dark mode | **Escuro apenas** — não há tema claro; `darkMode: ['class']` está no config mas sem uso |
 | Paleta de data-viz | `--chart-*`; séries além disso exigem token de categoria novo |
 
+### Exceção declarada
+
+**`frontend/src/utils/colors.js`** — a paleta canônica de etapas de produção (15 cores
+categóricas em hex) fica fora da regra de "sem hex". São **categorias**, não estados, e já estão
+centralizadas num único módulo, que é exatamente o que a regra quer. Tokenizar 15 cores de
+preenchimento de gráfico não traria ganho. Qualquer componente que precise colorir etapas
+**importa deste módulo** — não redefine a própria paleta.
+
 ### Dívidas conhecidas (a resolver na padronização visual)
 
 1. **A primária não é o verde Supren.** `--primary: 142 60% 55%` é um verde mais saturado que o
@@ -32,6 +40,9 @@ Pontos de variação declarados por este projeto:
 2. **Faltam tokens semânticos.** Existe `--destructive`, mas não `--success`, `--warn` nem
    `--info` — por isso o código recorre a cor crua do Tailwind (74 ocorrências medidas em
    2026-08-17, mais 6 hex hardcoded).
+
+> Ambas estão sendo quitadas nos PRs #12 e #13, que também adicionam o gate de conformidade
+> no CI. Ao mergear os dois, remover esta seção.
 
 ## Convenções obrigatórias
 
