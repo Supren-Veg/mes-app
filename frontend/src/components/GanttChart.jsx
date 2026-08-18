@@ -20,7 +20,7 @@ export default function GanttChart({ data }) {
     return colors;
   }, [last3]);
 
-  if (!last3.length) return <p className="text-sm text-gray-400">Sem dados de timeline.</p>;
+  if (!last3.length) return <p className="text-sm text-muted-foreground">Sem dados de timeline.</p>;
 
   return (
     <div className="space-y-6 overflow-x-auto">
@@ -42,11 +42,11 @@ export default function GanttChart({ data }) {
 
         return (
           <div key={day}>
-            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">{day}</p>
+            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{day}</p>
             {Object.entries(byOp).map(([op, rows]) => (
               <div key={op} className="mb-3">
-                <p className="text-xs text-gray-400 mb-1">{op}</p>
-                <div className="relative h-8 bg-gray-100 rounded overflow-hidden">
+                <p className="text-xs text-muted-foreground mb-1">{op}</p>
+                <div className="relative h-8 bg-muted rounded overflow-hidden">
                   {rows.map(r => {
                     if (!r.started_at || !r.finished_at) return null;
                     const s = new Date(r.started_at).getTime();
@@ -71,7 +71,7 @@ export default function GanttChart({ data }) {
                     );
                   })}
                 </div>
-                <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                   <span>{new Date(minTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                   <span>{new Date(maxTs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
@@ -84,7 +84,7 @@ export default function GanttChart({ data }) {
       {/* Legenda — usa o mesmo mapa de cores do gráfico */}
       <div className="flex flex-wrap gap-2 mt-2">
         {Object.entries(stageColors).slice(0, 12).map(([stage, color]) => (
-          <span key={stage} className="flex items-center gap-1 text-[10px] text-gray-600">
+          <span key={stage} className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <span className="w-3 h-3 rounded-sm inline-block" style={{ background: color }} />
             {stage}
           </span>

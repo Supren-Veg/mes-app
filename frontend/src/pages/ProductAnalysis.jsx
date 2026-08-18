@@ -22,7 +22,7 @@ function CustomTooltip({ active, payload }) {
       <p className="text-muted-foreground">Mín: {d.min_net_minutes} min · Máx: {d.max_net_minutes} min</p>
       <p className="text-muted-foreground">Pausas médias: {d.avg_pause_minutes} min</p>
       <p className="text-muted-foreground">{d.occurrences} ocorrência{d.occurrences !== 1 ? 's' : ''}</p>
-      {d.is_legacy ? <p className="text-yellow-500">★ Etapa histórica genérica</p> : null}
+      {d.is_legacy ? <p className="text-warn">★ Etapa histórica genérica</p> : null}
     </div>
   );
 }
@@ -110,7 +110,7 @@ export default function ProductAnalysis() {
                 <Bar dataKey="avg_net_minutes" radius={[0, 4, 4, 0]} maxBarSize={28}>
                   {chartData.map((entry, i) => (
                     <Cell key={entry.stage_id}
-                      fill={entry.is_legacy ? '#f59e0b' : STAGE_COLORS[i % STAGE_COLORS.length]} />
+                      fill={entry.is_legacy ? 'hsl(var(--warn))' : STAGE_COLORS[i % STAGE_COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -135,7 +135,7 @@ export default function ProductAnalysis() {
                   return (
                     <tr key={row.stage_id} className="hover:bg-muted/50">
                       <td className="px-4 py-2 font-medium text-foreground">
-                        {row.is_legacy && <span className="text-yellow-500 mr-1">★</span>}
+                        {row.is_legacy && <span className="text-warn mr-1">★</span>}
                         {row.stage}
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{row.occurrences}x</td>
@@ -145,9 +145,9 @@ export default function ProductAnalysis() {
                       <td className="px-4 py-2 text-muted-foreground">{row.avg_pause_minutes}</td>
                       <td className="px-4 py-2">
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                          variationPct > 50 ? 'bg-red-500/20 text-red-400' :
-                          variationPct > 25 ? 'bg-yellow-500/20 text-yellow-400' :
-                                              'bg-green-500/20 text-green-400'
+                          variationPct > 50 ? 'bg-destructive/20 text-destructive' :
+                          variationPct > 25 ? 'bg-warn/20 text-warn' :
+                                              'bg-success/20 text-success'
                         }`}>±{variationPct}%</span>
                       </td>
                     </tr>

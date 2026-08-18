@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { STAGE_COLORS } from '../utils/colors';
 
 const today    = new Date().toISOString().slice(0, 10);
 const monthAgo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
 
-const COLORS = ['hsl(var(--primary))', '#60a5fa', '#34d399', '#f59e0b', '#a78bfa', '#f87171'];
+
 
 function fmtMin(min) {
   if (!min) return '—';
@@ -73,7 +74,7 @@ export default function OperatorAnalysis() {
                   formatter={v => [`${v} min`, 'Tempo']}
                 />
                 <Bar dataKey="minutos" radius={[4, 4, 0, 0]}>
-                  {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {chartData.map((_, i) => <Cell key={i} fill={STAGE_COLORS[i % STAGE_COLORS.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -91,8 +92,8 @@ export default function OperatorAnalysis() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-primary-foreground shrink-0"
-                    style={{ background: COLORS[i % COLORS.length] }}
+                    className="flex size-9 items-center justify-center rounded-full text-sm font-bold text-primary-foreground shrink-0"
+                    style={{ background: STAGE_COLORS[i % STAGE_COLORS.length] }}
                   >
                     {op.operator[0].toUpperCase()}
                   </div>
@@ -117,7 +118,7 @@ export default function OperatorAnalysis() {
                     <p className="text-xs text-muted-foreground">Eficiência</p>
                     <p className={`text-sm font-semibold ${
                       op.avg_efficiency_pct >= 100 ? 'text-primary' :
-                      op.avg_efficiency_pct >= 80  ? 'text-yellow-400' :
+                      op.avg_efficiency_pct >= 80  ? 'text-warn' :
                       op.avg_efficiency_pct        ? 'text-destructive' : 'text-muted-foreground'
                     }`}>
                       {op.avg_efficiency_pct != null ? `${op.avg_efficiency_pct}%` : '—'}

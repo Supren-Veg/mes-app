@@ -38,8 +38,8 @@ export default function ChangePassword() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center pb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary mb-3">
-            <KeyRound className="h-5 w-5 text-primary-foreground" />
+          <div className="flex size-10 items-center justify-center rounded-md bg-primary mb-3">
+            <KeyRound className="size-5 text-primary-foreground" />
           </div>
           <CardTitle className="text-base font-semibold text-foreground">Definir nova senha</CardTitle>
           <p className="text-sm text-muted-foreground mt-0.5">

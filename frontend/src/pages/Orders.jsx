@@ -168,7 +168,7 @@ export default function Orders() {
       {/* Toast de sync */}
       {syncToast && (
         <div className="fixed bottom-5 right-5 z-50 bg-card border border-border rounded-xl shadow-xl px-4 py-3 flex items-start gap-3 max-w-sm animate-in slide-in-from-bottom-2">
-          <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${syncToast.error || syncToast.errors > 0 ? 'bg-red-400' : 'bg-primary'}`} />
+          <div className={`mt-0.5 size-2 rounded-full shrink-0 ${syncToast.error || syncToast.errors > 0 ? 'bg-destructive' : 'bg-primary'}`} />
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
               {syncToast.error ? 'Erro no sync Fácil123' : 'Sync Fácil123 concluído'}
@@ -181,7 +181,7 @@ export default function Orders() {
                     {syncToast.imported > 0 ? `${syncToast.imported} nova(s) ordem(s) importada(s)` : 'Nenhuma ordem nova'}
                     {syncToast.updated  > 0 ? ` · ${syncToast.updated} atualizada(s)` : ''}
                     {syncToast.errors   > 0 ? ` · ${syncToast.errors} erro(s)` : ''}
-                    {syncToast.message  ? <><br /><span className="text-red-400">{syncToast.message}</span></> : null}
+                    {syncToast.message  ? <><br /><span className="text-destructive">{syncToast.message}</span></> : null}
                   </>
                 )
               }
@@ -204,12 +204,12 @@ export default function Orders() {
               className="flex-1 min-w-[160px]"
             />
             <Button variant="outline" size="sm" onClick={() => exportCSV(rows)} disabled={rows.length === 0}>
-              <Download className="h-4 w-4" /> Exportar CSV
+              <Download className="size-4" /> Exportar CSV
             </Button>
             {isAdmin && (
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
-                  <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
                   {syncing ? 'Sincronizando…' : 'Atualizar Fácil123'}
                 </Button>
                 {syncInfo?.lastSync && (
@@ -224,7 +224,7 @@ export default function Orders() {
             )}
             {!isGuest && (
               <Button size="sm" asChild>
-                <Link to="/orders/new"><Plus className="h-4 w-4" /> Nova Ordem</Link>
+                <Link to="/orders/new"><Plus className="size-4" /> Nova Ordem</Link>
               </Button>
             )}
           </div>
@@ -272,7 +272,7 @@ export default function Orders() {
                       {o.efficiency_pct != null ? (
                         <span className={`font-semibold ${
                           o.efficiency_pct >= 100 ? 'text-primary' :
-                          o.efficiency_pct >= 80  ? 'text-yellow-400' : 'text-destructive'
+                          o.efficiency_pct >= 80  ? 'text-warn' : 'text-destructive'
                         }`}>{o.efficiency_pct}%</span>
                       ) : '—'}
                     </td>

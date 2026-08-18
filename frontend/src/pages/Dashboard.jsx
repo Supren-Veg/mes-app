@@ -148,7 +148,7 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CalendarClock className="h-4 w-4 text-primary" />
+                <CalendarClock className="size-4 text-primary" />
                 <CardTitle className="text-sm font-semibold text-foreground">
                   Ordens de Hoje — {new Date(today + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </CardTitle>
@@ -159,7 +159,7 @@ export default function Dashboard() {
           <CardContent>
             {todayOrders.length === 0 ? (
               <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
-                <CheckCircle2 className="h-4 w-4 opacity-50" />
+                <CheckCircle2 className="size-4 opacity-50" />
                 Nenhuma ordem pendente para hoje.
               </div>
             ) : (
