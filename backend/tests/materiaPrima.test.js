@@ -15,9 +15,11 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mes-materia-'));
 process.env.DB_PATH = path.join(tmpDir, 'teste.db');
 
 const db = require('../src/db/database');
+const axios = require('axios');
 const {
   sincronizarMateriais,
   agruparMateriais,
+  fetchProductions,
   GET_PRODUCTIONS_QUERY,
   GET_PRODUCTIONS_QUERY_SEM_MATERIAIS,
 } = require('../src/services/facil123Sync');
@@ -44,8 +46,8 @@ function criarOrdem() {
       INSERT INTO production_orders (product_id, production_date, planned_qty, external_id, source_sheet)
       VALUES (?, '2026-08-31', 130, ?, 'facil123')
     `)
-    .run(Number(produto.lastInsertRowid), `teste-${Date.now()}-${contador}`);
-  return Number(ordem.lastInsertRowid);
+    .run(produto.lastInsertRowid, `teste-${Date.now()}-${contador}`);
+  return ordem.lastInsertRowid;
 }
 
 function materiaisDa(orderId) {
@@ -122,6 +124,25 @@ test('ordem sem receita no Fácil não quebra e fica sem insumo', () => {
   assert.strictEqual(materiaisDa(orderId).length, 0);
 });
 
+test('receita ausente NÃO apaga a matéria-prima já gravada', () => {
+  const orderId = criarOrdem();
+  sincronizarMateriais(orderId, QUICHE_PALMITO);
+
+  // "o Fácil não mandou a receita" — nada a reconciliar
+  sincronizarMateriais(orderId, null);
+  assert.strictEqual(materiaisDa(orderId).length, 2);
+  sincronizarMateriais(orderId, undefined);
+  assert.strictEqual(materiaisDa(orderId).length, 2);
+});
+
+test('receita vazia de verdade ([]) esvazia a ordem', () => {
+  const orderId = criarOrdem();
+  sincronizarMateriais(orderId, QUICHE_PALMITO);
+
+  sincronizarMateriais(orderId, []);
+  assert.strictEqual(materiaisDa(orderId).length, 0);
+});
+
 test('linha sem produto é ignorada em vez de virar insumo fantasma', () => {
   const orderId = criarOrdem();
   const total = sincronizarMateriais(orderId, [
@@ -139,6 +160,48 @@ test('o detalhe da ordem entrega a matéria-prima para a tela', () => {
   assert.ok(Array.isArray(ordem.materials));
   assert.strictEqual(ordem.materials.length, 2);
   assert.strictEqual(ordem.materials[0].unit_symbol, 'KG');
+});
+
+test('erro de campo desconhecido marca a recusa para o fallback entrar', async () => {
+  const original = axios.post;
+  axios.post = async () => ({
+    status: 200,
+    data: { errors: [{ message: "Cannot query field 'production_materials_attributes' on type 'Production'" }] },
+  });
+  try {
+    await assert.rejects(
+      () => fetchProductions('cookie', '2026-08-01', '2026-08-31', 1, true),
+      (e) => e.materiaisRecusados === true,
+    );
+  } finally {
+    axios.post = original;
+  }
+});
+
+test('sessão expirada NÃO é confundida com recusa da matéria-prima', async () => {
+  const original = axios.post;
+  axios.post = async () => ({ status: 200, data: { errors: [{ message: 'You need to sign in first' }] } });
+  try {
+    await assert.rejects(
+      () => fetchProductions('cookie', '2026-08-01', '2026-08-31', 1, true),
+      (e) => e.materiaisRecusados === undefined,
+    );
+  } finally {
+    axios.post = original;
+  }
+});
+
+test('erro de servidor (500) não vira tentativa sem matéria-prima', async () => {
+  const original = axios.post;
+  axios.post = async () => ({ status: 500, data: {} });
+  try {
+    await assert.rejects(
+      () => fetchProductions('cookie', '2026-08-01', '2026-08-31', 1, true),
+      (e) => e.materiaisRecusados === undefined,
+    );
+  } finally {
+    axios.post = original;
+  }
 });
 
 test('a query de emergência não pede matéria-prima ao Fácil', () => {

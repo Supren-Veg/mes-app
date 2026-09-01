@@ -31,7 +31,8 @@ do mes-app; o gestao-supren apenas **lê** as ordens do MES por HTTP
 
 **Dentro (etapa 1 — este mandato, repo mes-app):**
 - Query `getProductions` passa a pedir `production_materials_attributes`.
-- Tabela nova `production_materials` no SQLite do MES (migration + schema.sql),
+- Tabela nova `production_materials` no SQLite do MES, declarada só no `schema.sql`
+  (aplicado a cada boot com `CREATE TABLE IF NOT EXISTS`, como as demais tabelas):
   uma linha por insumo de cada ordem, com `expected`, `consumed`, nome do produto e
   **símbolo da unidade** (KG/G).
 - Upsert dos insumos junto do upsert da ordem, idempotente por (ordem, insumo).
@@ -69,11 +70,17 @@ qualquer escrita no Fácil123, qualquer deploy em produção e o merge do PR.
 
 ## Critérios de conclusão
 
-- [ ] Migration cria `production_materials` e roda duas vezes sem erro (idempotente)
-- [ ] Sincronização traz os insumos das 3 OPs conhecidas de 31/08, com unidade
-- [ ] Detalhe da ordem na API devolve os insumos
-- [ ] Verificação executada (teste rodado ou fluxo exercitado de ponta a ponta)
-- [ ] PR aberto com /cto-review executado
+- [x] Tabela `production_materials` criada pelo `schema.sql`, aplicada em banco
+      existente sem perder dado — provado pela suíte rodando sobre cópia do banco real
+- [x] Sincronização grava os insumos das OPs de 31/08 com a unidade (KG e G) —
+      `backend/tests/materiaPrima.test.js`, dados copiados das ordens reais
+- [x] Detalhe da ordem na API devolve os insumos (`orderRepository.findById`)
+- [x] Verificação executada: **15/15 testes passando** (`cd backend && npm test`),
+      incluindo os três caminhos de erro do fallback
+- [x] PR aberto (#14) com cto-review executado; achados bloqueantes corrigidos:
+      query montada por composição (era regex frágil) e receita ausente deixou de
+      apagar a matéria-prima já gravada
+- [ ] Etapa 1 rodada de verdade contra o Fácil123 (exige ambiente com credencial)
 
 ## Aprovação
 

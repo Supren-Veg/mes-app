@@ -78,23 +78,27 @@ function resolveProductId(facil123Name, productMap) {
 // espelho para o tablet mostrar ao operador o que usar e quanto. Nada volta
 // para o Fácil — o que o operador digitar fica no gestao.
 
-let stmtsMateriais = null;
-function materiaisStmts() {
-  if (!stmtsMateriais) {
-    stmtsMateriais = {
-      buscar: db.prepare('SELECT id FROM production_materials WHERE order_id = ? AND external_id = ?'),
-      inserir: db.prepare(`
-        INSERT INTO production_materials (order_id, external_id, name, unit_symbol, expected, consumed)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `),
-      atualizar: db.prepare(`
-        UPDATE production_materials SET name = ?, unit_symbol = ?, expected = ?, consumed = ? WHERE id = ?
-      `),
-      listar: db.prepare('SELECT id, external_id FROM production_materials WHERE order_id = ?'),
-      apagar: db.prepare('DELETE FROM production_materials WHERE id = ?'),
-    };
-  }
-  return stmtsMateriais;
+/**
+ * Statements da matéria-prima. Criados por rodada (mesmo estilo dos statements de
+ * ordem em runSync) em vez de cacheados no módulo: um cache global sobreviveria a
+ * uma reabertura do banco (db:reset, outro DB_PATH) apontando para conexão morta.
+ */
+function criarStmtsMateriais() {
+  return {
+    buscar: db.prepare(`
+      SELECT id, name, unit_symbol, expected, consumed
+      FROM production_materials WHERE order_id = ? AND external_id = ?
+    `),
+    inserir: db.prepare(`
+      INSERT INTO production_materials (order_id, external_id, name, unit_symbol, expected, consumed)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `),
+    atualizar: db.prepare(`
+      UPDATE production_materials SET name = ?, unit_symbol = ?, expected = ?, consumed = ? WHERE id = ?
+    `),
+    listar: db.prepare('SELECT id, external_id FROM production_materials WHERE order_id = ?'),
+    apagar: db.prepare('DELETE FROM production_materials WHERE id = ?'),
+  };
 }
 
 function paraNumero(v) {
@@ -143,25 +147,42 @@ function agruparMateriais(attrs) {
 /**
  * Deixa a matéria-prima da ordem igual à do Fácil: insere as novas, atualiza as
  * que mudaram e apaga as que saíram da receita. Idempotente.
+ *
+ * `attrs` ausente (null/undefined) significa "o Fácil não mandou a receita", e
+ * isso NÃO é o mesmo que "a receita está vazia": nesse caso não se apaga nada.
+ * Lista vazia de verdade (`[]`) reconcilia normalmente. A distinção fica crítica
+ * na etapa 2, quando esta tabela passar a carregar o que o operador digitou.
+ *
  * Devolve quantos insumos a ordem tem depois do sync.
  */
-function sincronizarMateriais(orderId, attrs) {
-  const st = materiaisStmts();
+function sincronizarMateriais(orderId, attrs, stmts = criarStmtsMateriais()) {
+  const veioReceita = Array.isArray(attrs);
   const materiais = agruparMateriais(attrs);
   const vistos = new Set();
 
   for (const m of materiais) {
     vistos.add(m.externalId);
-    const existente = st.buscar.get(orderId, m.externalId);
-    if (existente) {
-      st.atualizar.run(m.name, m.unitSymbol, m.expected, m.consumed, existente.id);
-    } else {
-      st.inserir.run(orderId, m.externalId, m.name, m.unitSymbol, m.expected, m.consumed);
+    const atual = stmts.buscar.get(orderId, m.externalId);
+    if (!atual) {
+      stmts.inserir.run(orderId, m.externalId, m.name, m.unitSymbol, m.expected, m.consumed);
+      continue;
+    }
+    // Gravar sem mudança nenhuma custa duas escritas por insumo (o UPDATE mais o
+    // trigger de updated_at) e, no volume da rodada inteira, isso pesa.
+    const igual =
+      atual.name === m.name &&
+      atual.unit_symbol === m.unitSymbol &&
+      atual.expected === m.expected &&
+      atual.consumed === m.consumed;
+    if (!igual) {
+      stmts.atualizar.run(m.name, m.unitSymbol, m.expected, m.consumed, atual.id);
     }
   }
 
-  for (const antigo of st.listar.all(orderId)) {
-    if (!vistos.has(antigo.external_id)) st.apagar.run(antigo.id);
+  if (!veioReceita) return materiais.length;
+
+  for (const antigo of stmts.listar.all(orderId)) {
+    if (!vistos.has(antigo.external_id)) stmts.apagar.run(antigo.id);
   }
 
   return materiais.length;
@@ -245,7 +266,19 @@ async function login() {
 }
 
 // ── Query GraphQL de produções ─────────────────────────────────────────────────
-const GET_PRODUCTIONS_QUERY = `
+// A matéria-prima é um bloco à parte e a query é MONTADA com ou sem ele. Derivar
+// a versão de emergência por regex era frágil: bastava mexer nos campos para o
+// recorte não casar mais, e aí o "fallback" reenviava a query idêntica que
+// acabara de falhar — a rede de proteção viraria a causa da queda.
+const BLOCO_MATERIAIS = `
+    production_materials_attributes {
+      expected
+      consumed
+      product { id name unit { name symbol } }
+    }`;
+
+function montarQueryProducoes(blocoMateriais = '') {
+  return `
 query getProductions($expression: String, $start_date: APIDateTime, $end_date: APIDateTime, $page: Int) {
   productions: getProductions(
     expression: $expression
@@ -257,23 +290,21 @@ query getProductions($expression: String, $start_date: APIDateTime, $end_date: A
     produced_at
     expected
     product { id name }
-    productionlane { name }
-    production_materials_attributes {
-      expected
-      consumed
-      product { id name unit { name symbol } }
-    }
+    productionlane { name }${blocoMateriais}
   }
 }
 `;
+}
 
-// Mesma query sem a matéria-prima. Só entra em cena se o Fácil123 recusar o
-// bloco `production_materials_attributes` — o sync das ordens é essencial e não
-// pode cair junto com um campo novo.
-const GET_PRODUCTIONS_QUERY_SEM_MATERIAIS = GET_PRODUCTIONS_QUERY.replace(
-  /\s*production_materials_attributes\s*\{[^}]*\{[^}]*\{[^}]*\}\s*\}\s*\}/,
-  '',
-);
+const GET_PRODUCTIONS_QUERY = montarQueryProducoes(BLOCO_MATERIAIS);
+
+// Só entra em cena se o Fácil123 recusar o bloco novo: o sync das ordens é
+// essencial e não pode cair junto com um campo experimental.
+const GET_PRODUCTIONS_QUERY_SEM_MATERIAIS = montarQueryProducoes();
+
+// Como o Fácil123 avisa que não conhece o campo — a única falha que a query de
+// emergência resolve.
+const CAMPO_DESCONHECIDO = /unknown field|cannot query field|undefined field|no field|production_materials_attributes/i;
 
 async function fetchProductions(cookieStr, startDate, endDate, page = 1, comMateriais = true) {
   const resp = await axios.post(`${BASE_URL}/graphql`, {
@@ -287,6 +318,9 @@ async function fetchProductions(cookieStr, startDate, endDate, page = 1, comMate
       'Referer':          `${BASE_URL}/#/producoes`,
       'X-Requested-With': 'XMLHttpRequest',
     },
+    // Sem teto, um Fácil engasgado com o payload maior penduraria a requisição
+    // para sempre e o sync ficaria eternamente 'running', sem nunca fechar o log.
+    timeout: 60_000,
     validateStatus: () => true,
   });
 
@@ -298,8 +332,11 @@ async function fetchProductions(cookieStr, startDate, endDate, page = 1, comMate
     throw err;
   }
   if (resp.data.errors) {
-    const err = new Error(resp.data.errors[0]?.message || 'GraphQL error');
-    if (comMateriais) err.materiaisRecusados = true;
+    const mensagem = resp.data.errors[0]?.message || 'GraphQL error';
+    const err = new Error(mensagem);
+    // Sessão expirada e rate limit também chegam aqui: repetir sem a matéria-prima
+    // não resolveria nenhum dos dois e ainda jogaria fora a receita da rodada.
+    if (comMateriais && CAMPO_DESCONHECIDO.test(mensagem)) err.materiaisRecusados = true;
     throw err;
   }
   return resp.data.data?.productions || [];
@@ -362,6 +399,11 @@ async function runSync() {
 
     console.log(`[sync] Total extraído: ${allRows.length}`);
 
+    // IMPORTANTE: a busca termina TODAS as páginas antes do upsert começar, então
+    // `materiaisSuportados` já tem valor final aqui. Quem trocar isso por processar
+    // página a página precisa parar de reconciliar a matéria-prima no meio do
+    // caminho — senão uma recusa tardia apaga a receita das ordens já gravadas.
+
     const stmtFind   = db.prepare('SELECT id, planned_qty, production_date FROM production_orders WHERE external_id = ?');
     const stmtInsert = db.prepare(`
       INSERT INTO production_orders (product_id, operator_id, production_date, status, planned_qty, external_id, source_sheet)
@@ -372,6 +414,7 @@ async function runSync() {
       WHERE external_id = ?
     `);
 
+    const stmtsMateriais = criarStmtsMateriais();
     const seenExternalIds = new Set();
 
     for (const row of allRows) {
@@ -409,7 +452,7 @@ async function runSync() {
         // fallback, lista vazia quer dizer "não perguntei" — apagar o que já está
         // no banco seria jogar fora informação boa.
         if (materiaisSuportados) {
-          stats.materiais += sincronizarMateriais(orderId, row.production_materials_attributes);
+          stats.materiais += sincronizarMateriais(orderId, row.production_materials_attributes, stmtsMateriais);
         }
       } catch (e) {
         console.error(`[sync] Erro na linha ${row.id}:`, e.message);
@@ -456,4 +499,12 @@ function getLastSync() {
   `).get() || null;
 }
 
-module.exports = { runSync, getLastSync, sincronizarMateriais, agruparMateriais, GET_PRODUCTIONS_QUERY, GET_PRODUCTIONS_QUERY_SEM_MATERIAIS };
+module.exports = {
+  runSync,
+  getLastSync,
+  sincronizarMateriais,
+  agruparMateriais,
+  fetchProductions,
+  GET_PRODUCTIONS_QUERY,
+  GET_PRODUCTIONS_QUERY_SEM_MATERIAIS,
+};
