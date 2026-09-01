@@ -73,6 +73,100 @@ function resolveProductId(facil123Name, productMap) {
   return r.lastInsertRowid;
 }
 
+// ── Matéria-prima da ordem ────────────────────────────────────────────────────
+// O Fácil123 devolve a receita planejada de cada produção. Guardamos como
+// espelho para o tablet mostrar ao operador o que usar e quanto. Nada volta
+// para o Fácil — o que o operador digitar fica no gestao.
+
+let stmtsMateriais = null;
+function materiaisStmts() {
+  if (!stmtsMateriais) {
+    stmtsMateriais = {
+      buscar: db.prepare('SELECT id FROM production_materials WHERE order_id = ? AND external_id = ?'),
+      inserir: db.prepare(`
+        INSERT INTO production_materials (order_id, external_id, name, unit_symbol, expected, consumed)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `),
+      atualizar: db.prepare(`
+        UPDATE production_materials SET name = ?, unit_symbol = ?, expected = ?, consumed = ? WHERE id = ?
+      `),
+      listar: db.prepare('SELECT id, external_id FROM production_materials WHERE order_id = ?'),
+      apagar: db.prepare('DELETE FROM production_materials WHERE id = ?'),
+    };
+  }
+  return stmtsMateriais;
+}
+
+function paraNumero(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function somar(a, b) {
+  if (a === null) return b;
+  if (b === null) return a;
+  return a + b;
+}
+
+/**
+ * Junta as linhas cruas do Fácil por produto.
+ * O Fácil aceita a mesma matéria-prima em duas linhas da mesma receita; para o
+ * operador isso é UM insumo com a soma — e é o que a chave (ordem, produto) exige.
+ */
+function agruparMateriais(attrs) {
+  const porProduto = new Map();
+  for (const linha of Array.isArray(attrs) ? attrs : []) {
+    const produto = linha?.product;
+    if (!produto?.id) continue;
+    const externalId = String(produto.id);
+    const expected = paraNumero(linha.expected);
+    const consumed = paraNumero(linha.consumed);
+    const existente = porProduto.get(externalId);
+    if (existente) {
+      existente.expected = somar(existente.expected, expected);
+      existente.consumed = somar(existente.consumed, consumed);
+      continue;
+    }
+    porProduto.set(externalId, {
+      externalId,
+      // símbolo primeiro: "0,08 KG" e "150 G" só fazem sentido com a unidade junto
+      unitSymbol: produto.unit?.symbol || produto.unit?.name || null,
+      name: (produto.name || '').trim() || `Insumo ${externalId}`,
+      expected,
+      consumed,
+    });
+  }
+  return Array.from(porProduto.values());
+}
+
+/**
+ * Deixa a matéria-prima da ordem igual à do Fácil: insere as novas, atualiza as
+ * que mudaram e apaga as que saíram da receita. Idempotente.
+ * Devolve quantos insumos a ordem tem depois do sync.
+ */
+function sincronizarMateriais(orderId, attrs) {
+  const st = materiaisStmts();
+  const materiais = agruparMateriais(attrs);
+  const vistos = new Set();
+
+  for (const m of materiais) {
+    vistos.add(m.externalId);
+    const existente = st.buscar.get(orderId, m.externalId);
+    if (existente) {
+      st.atualizar.run(m.name, m.unitSymbol, m.expected, m.consumed, existente.id);
+    } else {
+      st.inserir.run(orderId, m.externalId, m.name, m.unitSymbol, m.expected, m.consumed);
+    }
+  }
+
+  for (const antigo of st.listar.all(orderId)) {
+    if (!vistos.has(antigo.external_id)) st.apagar.run(antigo.id);
+  }
+
+  return materiais.length;
+}
+
 // ── Log de sync ────────────────────────────────────────────────────────────────
 function createLog() {
   return db.prepare(`INSERT INTO sync_logs (started_at) VALUES (datetime('now'))`).run().lastInsertRowid;
@@ -164,15 +258,28 @@ query getProductions($expression: String, $start_date: APIDateTime, $end_date: A
     expected
     product { id name }
     productionlane { name }
+    production_materials_attributes {
+      expected
+      consumed
+      product { id name unit { name symbol } }
+    }
   }
 }
 `;
 
-async function fetchProductions(cookieStr, startDate, endDate, page = 1) {
+// Mesma query sem a matéria-prima. Só entra em cena se o Fácil123 recusar o
+// bloco `production_materials_attributes` — o sync das ordens é essencial e não
+// pode cair junto com um campo novo.
+const GET_PRODUCTIONS_QUERY_SEM_MATERIAIS = GET_PRODUCTIONS_QUERY.replace(
+  /\s*production_materials_attributes\s*\{[^}]*\{[^}]*\{[^}]*\}\s*\}\s*\}/,
+  '',
+);
+
+async function fetchProductions(cookieStr, startDate, endDate, page = 1, comMateriais = true) {
   const resp = await axios.post(`${BASE_URL}/graphql`, {
     operationName: 'getProductions',
     variables: { start_date: startDate, end_date: endDate, expression: '', page },
-    query: GET_PRODUCTIONS_QUERY,
+    query: comMateriais ? GET_PRODUCTIONS_QUERY : GET_PRODUCTIONS_QUERY_SEM_MATERIAIS,
   }, {
     headers: {
       'Content-Type':     'application/json',
@@ -183,8 +290,18 @@ async function fetchProductions(cookieStr, startDate, endDate, page = 1) {
     validateStatus: () => true,
   });
 
-  if (resp.status !== 200) throw new Error(`GraphQL HTTP ${resp.status}`);
-  if (resp.data.errors) throw new Error(resp.data.errors[0]?.message || 'GraphQL error');
+  // Query malformada/recusada = 400/422 no Fácil; qualquer outro status é rede ou
+  // sessão, e aí repetir sem os materiais não adianta nada.
+  if (resp.status !== 200) {
+    const err = new Error(`GraphQL HTTP ${resp.status}`);
+    if (comMateriais && (resp.status === 400 || resp.status === 422)) err.materiaisRecusados = true;
+    throw err;
+  }
+  if (resp.data.errors) {
+    const err = new Error(resp.data.errors[0]?.message || 'GraphQL error');
+    if (comMateriais) err.materiaisRecusados = true;
+    throw err;
+  }
   return resp.data.data?.productions || [];
 }
 
@@ -210,7 +327,7 @@ function monthRanges(fromDate) {
 // ── Sync principal ─────────────────────────────────────────────────────────────
 async function runSync() {
   const logId = createLog();
-  const stats = { imported: 0, updated: 0, skipped: 0, errors: 0, message: null };
+  const stats = { imported: 0, updated: 0, skipped: 0, errors: 0, materiais: 0, message: null };
 
   console.log(`[sync] Iniciando sync Fácil123 (log #${logId})...`);
 
@@ -219,11 +336,22 @@ async function runSync() {
     const productMap  = buildProductMap();
 
     const allRows = [];
+    // Desliga na primeira recusa e não volta a tentar no mesmo sync — insistir a
+    // cada página só gastaria requisição no Fácil.
+    let materiaisSuportados = true;
 
     for (const { start, end } of monthRanges(IMPORT_FROM_DATE)) {
       let page = 1;
       while (true) {
-        const rows = await fetchProductions(cookieStr, start, end, page);
+        let rows;
+        try {
+          rows = await fetchProductions(cookieStr, start, end, page, materiaisSuportados);
+        } catch (e) {
+          if (!materiaisSuportados || !e.materiaisRecusados) throw e;
+          console.warn(`[sync] Fácil123 recusou a matéria-prima na query (${e.message}) — seguindo sem ela`);
+          materiaisSuportados = false;
+          rows = await fetchProductions(cookieStr, start, end, page, false);
+        }
         console.log(`[sync] ${start.slice(0,7)} página ${page}: ${rows.length} produções`);
         if (!rows.length) break;
         allRows.push(...rows);
@@ -267,12 +395,21 @@ async function runSync() {
         }
 
         const existing = stmtFind.get(externalId);
+        let orderId;
         if (existing) {
           stmtUpdate.run(plannedQty, productionDate, externalId);
+          orderId = existing.id;
           stats.updated++;
         } else {
-          stmtInsert.run(productId, productionDate, plannedQty, externalId);
+          orderId = stmtInsert.run(productId, productionDate, plannedQty, externalId).lastInsertRowid;
           stats.imported++;
+        }
+
+        // Só reconcilia quando o Fácil realmente mandou a receita: com a query de
+        // fallback, lista vazia quer dizer "não perguntei" — apagar o que já está
+        // no banco seria jogar fora informação boa.
+        if (materiaisSuportados) {
+          stats.materiais += sincronizarMateriais(orderId, row.production_materials_attributes);
         }
       } catch (e) {
         console.error(`[sync] Erro na linha ${row.id}:`, e.message);
@@ -298,8 +435,8 @@ async function runSync() {
       }
     }
 
-    stats.message = `Total: ${allRows.length}, cancelados: ${cancelled}`;
-    console.log(`[sync] Concluído — importados: ${stats.imported}, atualizados: ${stats.updated}, ignorados: ${stats.skipped}, cancelados: ${cancelled}, erros: ${stats.errors}`);
+    stats.message = `Total: ${allRows.length}, cancelados: ${cancelled}, insumos: ${stats.materiais}${materiaisSuportados ? '' : ' (matéria-prima indisponível nesta rodada)'}`;
+    console.log(`[sync] Concluído — importados: ${stats.imported}, atualizados: ${stats.updated}, ignorados: ${stats.skipped}, cancelados: ${cancelled}, insumos: ${stats.materiais}, erros: ${stats.errors}`);
 
   } catch (e) {
     stats.errors++;
@@ -319,4 +456,4 @@ function getLastSync() {
   `).get() || null;
 }
 
-module.exports = { runSync, getLastSync };
+module.exports = { runSync, getLastSync, sincronizarMateriais, agruparMateriais, GET_PRODUCTIONS_QUERY, GET_PRODUCTIONS_QUERY_SEM_MATERIAIS };
