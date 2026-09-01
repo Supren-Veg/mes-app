@@ -78,7 +78,20 @@ const orderRepository = {
       pausesByStep[p.step_id].push(p);
     }
 
-    return { ...order, steps: steps.map(s => ({ ...s, pauses: pausesByStep[s.id] || [] })) };
+    // Matéria-prima planejada da ordem — é o que o tablet mostra para o operador
+    // saber o que usar e quanto. Ordem alfabética: a lista é lida, não calculada.
+    const materials = db.prepare(`
+      SELECT id, external_id, name, unit_symbol, expected, consumed
+      FROM production_materials
+      WHERE order_id = ?
+      ORDER BY name
+    `).all(id);
+
+    return {
+      ...order,
+      steps: steps.map(s => ({ ...s, pauses: pausesByStep[s.id] || [] })),
+      materials,
+    };
   },
 
   create: ({ product_id, operator_id, production_date, planned_qty, notes }) => {

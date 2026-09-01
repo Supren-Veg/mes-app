@@ -123,6 +123,29 @@ CREATE TABLE IF NOT EXISTS production_pauses (
 CREATE INDEX IF NOT EXISTS idx_pauses_step ON production_pauses(step_id);
 
 -- ============================================================
+-- production_materials
+-- Matéria-prima esperada de cada ordem, espelhada do Fácil123.
+-- Chave (order_id, external_id) torna o sync idempotente; external_id é o id
+-- do PRODUTO no Fácil, que sobrevive à recriação da linha da receita.
+-- unit_symbol é obrigatório na prática: "0,08" e "150" são ambíguos sem KG/G.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS production_materials (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid        TEXT    NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(16)))),
+  order_id    INTEGER NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
+  external_id VARCHAR(50)  NOT NULL,
+  name        VARCHAR(200) NOT NULL,
+  unit_symbol VARCHAR(20),
+  expected    REAL,
+  consumed    REAL,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  UNIQUE (order_id, external_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_materials_order ON production_materials(order_id);
+
+-- ============================================================
 -- Trigger: updated_at automático
 -- ============================================================
 CREATE TRIGGER IF NOT EXISTS trg_operators_updated
@@ -144,3 +167,7 @@ CREATE TRIGGER IF NOT EXISTS trg_orders_updated
 CREATE TRIGGER IF NOT EXISTS trg_steps_updated
   AFTER UPDATE ON production_steps
   BEGIN UPDATE production_steps SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS trg_materials_updated
+  AFTER UPDATE ON production_materials
+  BEGIN UPDATE production_materials SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = NEW.id; END;

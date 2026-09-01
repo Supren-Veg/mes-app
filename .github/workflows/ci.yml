@@ -30,3 +30,23 @@ jobs:
 
       - name: Conformidade com o design system
         run: bash scripts/check-design-system.sh
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # node:sqlite (usado pelo banco do MES) só existe a partir do Node 22.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: backend
+        run: npm ci
+
+      - name: Testes
+        working-directory: backend
+        run: npm test
