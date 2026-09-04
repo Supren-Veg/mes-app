@@ -1,0 +1,37 @@
+name: gitleaks — alarme anti-segredo
+# Barra chave NOVA antes de entrar. So escaneia o que o PR/push ADICIONA
+# (nao o historico antigo) — a limpeza de historico e um passo separado.
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Instalar gitleaks
+        run: |
+          VER=8.30.1
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" -o /tmp/gl.tgz
+          tar -xzf /tmp/gl.tgz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: Escanear so o que este PR/push adiciona
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=100 || true
+            RANGE="origin/${{ github.base_ref }}..HEAD"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              RANGE="HEAD~1..HEAD"
+            else
+              RANGE="${BEFORE}..HEAD"
+            fi
+          fi
+          echo "Escaneando commits: $RANGE"
+          gitleaks detect --redact -c .gitleaks.toml --exit-code 1 --log-opts="$RANGE"
