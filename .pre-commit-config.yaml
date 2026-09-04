@@ -1,0 +1,7 @@
+# Alarme anti-segredo local — roda antes de cada commit (barra chave nova staged).
+# Instalar 1x na sua maquina:  pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks

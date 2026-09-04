@@ -1,0 +1,24 @@
+# Alarme anti-segredo (gitleaks) — Supren/Norte · NRT-_991045
+# Barra chave NOVA antes de entrar no repo. A lista de excecoes abaixo sao
+# falsos-positivos conhecidos (chaves PUBLICAVEIS por design + placeholders de
+# exemplo + rascunhos internos) — nao sao segredos vivos. Provado em 04/09.
+title = "Supren gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos-positivos conhecidos — nao sao segredos vivos"
+regexes = [
+  # Supabase publishable key (anon): publica por design, protegida por RLS
+  '''sb_publishable_[A-Za-z0-9_\-]{10,}''',
+  # Google OAuth client ID: identificador publico, nao e segredo
+  '''[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com''',
+  # placeholder de exemplo (comentario/curl de documentacao)
+  '''SUA_CHAVE''',
+]
+stopwords = ["REDACTED", "EXAMPLE", "PLACEHOLDER"]
+paths = [
+  '''\.claude/.*''',
+  '''(^|/)\.env\.example$''',
+]
