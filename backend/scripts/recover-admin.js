@@ -4,6 +4,9 @@
  * Rode este script apenas para recuperação de acesso.
  * Gera uma senha temporária aleatória a cada execução (nunca fixa no código — repo público).
  * Após rodar, faça login com a senha impressa e troque imediatamente.
+ * Como rodar: no shell do serviço no Railway (senão altera o SQLite local),
+ *   node --experimental-sqlite backend/scripts/recover-admin.js
+ * Atenção: o UPDATE também troca o e-mail do operador "Ygor" pelo EMAIL abaixo.
  */
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
