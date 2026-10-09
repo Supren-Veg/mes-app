@@ -2,14 +2,19 @@
  * recover-admin.js
  * Recria a conta do administrador Ygor com uma senha temporária.
  * Rode este script apenas para recuperação de acesso.
- * Após rodar, faça login com a senha abaixo e troque imediatamente.
+ * Gera uma senha temporária aleatória a cada execução (nunca fixa no código — repo público).
+ * Após rodar, faça login com a senha impressa e troque imediatamente.
+ * Como rodar: no shell do serviço no Railway (senão altera o SQLite local),
+ *   node --experimental-sqlite backend/scripts/recover-admin.js
+ * Atenção: o UPDATE também troca o e-mail do operador "Ygor" pelo EMAIL abaixo.
  */
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../src/db/database');
 
 const NOME  = 'Ygor';
 const EMAIL = 'ygor@empresa.com'; // ajuste se necessário
-const SENHA = 'Admin@123';        // troque após o primeiro login
+const SENHA = crypto.randomBytes(12).toString('base64url'); // temporária, troca obrigatória no 1º login
 
 const hash = bcrypt.hashSync(SENHA, 10);
 
